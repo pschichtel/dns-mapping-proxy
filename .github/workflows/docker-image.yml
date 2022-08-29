@@ -1,0 +1,19 @@
+name: Docker Image CI
+
+on: [ push, workflow_dispatch ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build the Docker image
+      env:
+        DOCKERHUB_USERNAME: "${{ secrets.DOCKERHUB_USERNAME }}"
+        DOCKERHUB_PASSWORD: "${{ secrets.DOCKERHUB_PASSWORD }}"
+      run: |
+        image_name="pschichtel/dns-mapping-proxy:latest"
+        echo "${DOCKERHUB_PASSWORD}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
+        docker build . --file Dockerfile --tag "$image_name"
+        docker push "$image_name"
+
