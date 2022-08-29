@@ -5,6 +5,11 @@ import asyncio
 import signal
 from dnsrewriteproxy import DnsProxy
 
+if 'SERVER_ADDRESS' in os.environ:
+    server_address = os.environ['SERVER_ADDRESS']
+else:
+    server_address = '0.0.0.0'
+
 if 'SERVER_PORT' in os.environ:
     server_port = int(os.environ['SERVER_PORT'])
 else:
@@ -27,7 +32,7 @@ rules = [
 def get_socket_default():
     sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
     sock.setblocking(False)
-    sock.bind(('', server_port))
+    sock.bind((server_address, server_port))
     return sock
 
 
