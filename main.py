@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import os
 import socket
 import asyncio
@@ -22,37 +23,6 @@ def get_resolver_from_env():
     return Resolver(get_nameservers=nameservers_from_env)
 
 
-if 'SERVER_ADDRESS' in os.environ:
-    server_address = os.environ['SERVER_ADDRESS']
-else:
-    server_address = '0.0.0.0'
-
-if 'SERVER_PORT' in os.environ:
-    server_port = int(os.environ['SERVER_PORT'])
-else:
-    server_port = 53
-
-if 'DNS_SOURCE_SUFFIX' not in os.environ:
-    print("DNS_SOURCE_SUFFIX missing!")
-    exit(1)
-
-if 'DNS_TARGET_SUFFIX' not in os.environ:
-    print("DNS_TARGET_SUFFIX missing!")
-    exit(1)
-
-rules = [
-    (r'^(.*)' + os.environ['DNS_SOURCE_SUFFIX'] + '$', r'\1' + os.environ['DNS_TARGET_SUFFIX']),
-    (r'(^.*$)', r'\1'),
-]
-
-
-def get_socket_default():
-    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-    sock.setblocking(False)
-    sock.bind((server_address, server_port))
-    return sock
-
-
 async def noop_fqdn_transformer(fqdn):
     return bytes(fqdn)
 
@@ -70,7 +40,44 @@ def cache_clearing_as_is_resolver(nameserver_provider):
     return resolve_and_clear, clear_cache
 
 
+def get_socket_default():
+    if 'SERVER_ADDRESS' in os.environ:
+        server_address = os.environ['SERVER_ADDRESS']
+    else:
+        server_address = '0.0.0.0'
+
+    if 'SERVER_PORT' in os.environ:
+        server_port = int(os.environ['SERVER_PORT'])
+    else:
+        server_port = 53
+    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+    sock.setblocking(False)
+    sock.bind((server_address, server_port))
+    return sock
+
+
+def load_rules() -> list[(str, str)]:
+    def to_rule(tuple_like: list[str]) -> (str, str):
+        return r'^' + tuple_like[0] + r'$', tuple_like[1]
+
+    if 'RULES_FILE' in os.environ:
+        with open("a") as f:
+            return [to_rule(rule) for rule in json.load(f)]
+    if 'RULES' in os.environ:
+        return [to_rule(rule) for rule in json.loads(os.environ['RULES'])]
+    return []
+
+
 async def main():
+    rules = load_rules()
+
+    if len(rules) == 0:
+        print("No rules have been defined! Use RULES or RULES_FILE env vars.")
+        exit(1)
+
+    for f, t in rules:
+        print("Rule: {} -> {}".format(f, t))
+
     nameserver_provider = get_nameservers_default
     if 'DNS_UPSTREAM' in os.environ:
         nameserver_provider = nameservers_from_env
