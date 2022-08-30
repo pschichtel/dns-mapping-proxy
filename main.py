@@ -14,7 +14,6 @@ async def nameservers_from_env(_, __):
     if 'DNS_UPSTREAM_PORT' in os.environ:
         port = int(os.environ['DNS_UPSTREAM_PORT'])
     
-    print("Providing {}:{} as namespace!".format(host, port))
     for _ in range(5):
         yield 0.5, (host, port)
 
