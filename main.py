@@ -3,7 +3,7 @@ import os
 import socket
 import asyncio
 import signal
-from aiodnsresolver import Resolver
+from aiodnsresolver import Resolver, get_nameservers_default, get_logger_adapter_default
 from dnsrewriteproxy import DnsProxy, get_resolver_default
 
 async def nameservers_from_env(_, __):
@@ -50,15 +50,27 @@ def get_socket_default():
     return sock
 
 
+def cache_clearing_resolver(nameserver_provider):
+    resolve, clear_cache = Resolver(get_nameservers=nameserver_provider)
+
+    async def resolve_and_clear(fqdn_str, qtype, get_logger_adapter=get_logger_adapter_default):
+        await clear_cache()
+        return await resolve(fqdn_str, qtype, get_logger_adapter)
+
+    return resolve_and_clear, clear_cache
+
+
 async def main():
-    resolver_factory = get_resolver_default
+    nameserver_provider = get_nameservers_default
     if 'DNS_UPSTREAM' in os.environ:
-        resolver_factory = get_resolver_from_env
+        nameserver_provider = nameservers_from_env
+
+    resolver = cache_clearing_resolver(nameserver_provider)
 
     start = DnsProxy(
         rules=rules,
         get_socket=get_socket_default,
-        get_resolver=resolver_factory,
+        get_resolver=lambda: resolver,
     )
     proxy_task = await start()
 
