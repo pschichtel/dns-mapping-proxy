@@ -4,7 +4,8 @@ import socket
 import asyncio
 import signal
 from aiodnsresolver import Resolver, get_nameservers_default, get_logger_adapter_default
-from dnsrewriteproxy import DnsProxy, get_resolver_default
+from dnsrewriteproxy import DnsProxy
+
 
 async def nameservers_from_env(_, __):
     host = os.environ['DNS_UPSTREAM']
@@ -14,10 +15,12 @@ async def nameservers_from_env(_, __):
     
     print("Providing {}:{} as namespace!".format(host, port))
     for _ in range(5):
-        yield (0.5, (host, port))
+        yield 0.5, (host, port)
+
 
 def get_resolver_from_env():
     return Resolver(get_nameservers=nameservers_from_env)
+
 
 if 'SERVER_ADDRESS' in os.environ:
     server_address = os.environ['SERVER_ADDRESS']
@@ -50,8 +53,15 @@ def get_socket_default():
     return sock
 
 
-def cache_clearing_resolver(nameserver_provider):
-    resolve, clear_cache = Resolver(get_nameservers=nameserver_provider)
+async def noop_fqdn_transformer(fqdn):
+    return bytes(fqdn)
+
+
+def cache_clearing_as_is_resolver(nameserver_provider):
+    resolve, clear_cache = Resolver(
+        get_nameservers=nameserver_provider,
+        transform_fqdn=noop_fqdn_transformer,
+    )
 
     async def resolve_and_clear(fqdn_str, qtype, get_logger_adapter=get_logger_adapter_default):
         await clear_cache()
@@ -65,7 +75,7 @@ async def main():
     if 'DNS_UPSTREAM' in os.environ:
         nameserver_provider = nameservers_from_env
 
-    resolver = cache_clearing_resolver(nameserver_provider)
+    resolver = cache_clearing_as_is_resolver(nameserver_provider)
 
     start = DnsProxy(
         rules=rules,
