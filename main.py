@@ -58,7 +58,10 @@ def get_socket_default():
 
 def load_rules() -> list[(str, str)]:
     def to_rule(tuple_like: list[str]) -> (str, str):
-        return r'^' + tuple_like[0] + r'$', tuple_like[1]
+        repeat = False
+        if len(tuple_like) > 2:
+            repeat = bool(tuple_like[2])
+        return r'^' + tuple_like[0] + r'$', tuple_like[1], repeat
 
     if 'RULES_FILE' in os.environ:
         with open("a") as f:
@@ -75,8 +78,8 @@ async def main():
         print("No rules have been defined! Use RULES or RULES_FILE env vars.")
         exit(1)
 
-    for f, t in rules:
-        print("Rule: {} -> {}".format(f, t))
+    for f, t, r in rules:
+        print("Rule: {} -> {} (repeat: {})".format(f, t, r))
 
     nameserver_provider = get_nameservers_default
     if 'DNS_UPSTREAM' in os.environ:

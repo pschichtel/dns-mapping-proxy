@@ -1,3 +1,10 @@
+# this has been copied over from:
+# https://github.com/uktrade/dns-rewrite-proxy/blob/v0.0.16/dnsrewriteproxy.py
+#
+# Modifications:
+#  * Recursive rewriting support
+#  * Preserve case during rewriting
+
 from asyncio import (
     CancelledError,
     Queue,
@@ -136,7 +143,7 @@ def DnsProxy(
         # We can't [and I suspect shouldn't try to] return an error to the
         # client, since we're not able to extract the QID, so the client won't
         # be able to match it with an outgoing request
-        query = parse(request_data)
+        query: Message = parse(request_data)
 
         try:
             return pack(await proxy(request_logger, resolve, query))
@@ -144,24 +151,31 @@ def DnsProxy(
             request_logger.exception('Failed to proxy %s', query)
             return pack(error(query, ERRORS.SERVFAIL))
 
+    def rewrite_name(request_logger, name):
+        for pattern, replace, repeat in rules:
+            rewritten_name, num_matches = re.subn(pattern, replace, name, flags=re.IGNORECASE)
+            if num_matches:
+                request_logger.info('Matches rule (%s, %s)', pattern, replace)
+                if rewritten_name is not name and repeat:
+                    return rewrite_name(request_logger, rewritten_name)
+                else:
+                    return rewritten_name
+        else:
+            return None
+
     async def proxy(request_logger, resolve, query):
         name_bytes = query.qd[0].name
         request_logger.info('Name: %s', name_bytes)
 
-        name_str_lower = query.qd[0].name.lower().decode('idna')
-        request_logger.info('Decoded: %s', name_str_lower)
+        name = name_bytes.decode('idna')
+        request_logger.info('Decoded: %s', name)
 
         if query.qd[0].qtype != TYPES.A:
             request_logger.info('Unhandled query type: %s', query.qd[0].qtype)
             return error(query, ERRORS.REFUSED)
 
-        for pattern, replace in rules:
-            rewritten_name_str, num_matches = re.subn(pattern, replace, name_str_lower)
-            if num_matches:
-                request_logger.info('Matches rule (%s, %s)', pattern, replace)
-                break
-        else:
-            # No break was triggered, i.e. no match
+        rewritten_name_str = rewrite_name(request_logger, name)
+        if rewritten_name_str is None:
             request_logger.info('Does not match a rule')
             return error(query, ERRORS.REFUSED)
 
