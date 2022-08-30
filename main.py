@@ -68,6 +68,7 @@ def load_rules() -> list[(str, str)]:
 
 
 async def main():
+    print("Loading rules...")
     rules = load_rules()
 
     if len(rules) == 0:
@@ -81,8 +82,10 @@ async def main():
     if 'DNS_UPSTREAM' in os.environ:
         nameserver_provider = nameservers_from_env
 
+    print("Setting up resolver...")
     resolver = cache_clearing_as_is_resolver(nameserver_provider)
 
+    print("Starting up proxy")
     start = DnsProxy(
         rules=rules,
         get_socket=get_socket_default,
@@ -100,4 +103,5 @@ async def main():
         print("Shutting down!")
 
 
+print("Starting up...")
 asyncio.run(main())
