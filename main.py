@@ -3,7 +3,21 @@ import os
 import socket
 import asyncio
 import signal
-from dnsrewriteproxy import DnsProxy
+from aiodnsresolver import Resolver
+from dnsrewriteproxy import DnsProxy, get_resolver_default
+
+async def nameservers_from_env(_, __):
+    host = os.environ['DNS_UPSTREAM']
+    port = 53
+    if 'DNS_UPSTREAM_PORT' in os.environ:
+        port = int(os.environ['DNS_UPSTREAM_PORT'])
+    
+    print("Providing {}:{} as namespace!".format(host, port))
+    for _ in range(5):
+        yield (0.5, (host, port))
+
+def get_resolver_from_env():
+    return Resolver(get_nameservers=nameservers_from_env)
 
 if 'SERVER_ADDRESS' in os.environ:
     server_address = os.environ['SERVER_ADDRESS']
@@ -37,7 +51,15 @@ def get_socket_default():
 
 
 async def main():
-    start = DnsProxy(rules=rules, get_socket=get_socket_default)
+    resolver_factory = get_resolver_default
+    if 'DNS_UPSTREAM' in os.environ:
+        resolver_factory = get_resolver_from_env
+
+    start = DnsProxy(
+        rules=rules,
+        get_socket=get_socket_default,
+        get_resolver=resolver_factory,
+    )
     proxy_task = await start()
 
     loop = asyncio.get_running_loop()

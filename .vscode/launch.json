@@ -11,7 +11,8 @@
             "env": {
                 "DNS_SOURCE_SUFFIX": ".schichtp.dev.docker.cognitivevoice.io",
                 "DNS_TARGET_SUFFIX": ".cvg",
-                "SERVER_PORT": "2053"
+                "SERVER_PORT": "2053",
+                "DNS_UPSTREAM": "1.1.1.1"
             }
         }
     ]
