@@ -1,12 +1,15 @@
-FROM python:3.10-alpine
+FROM coredns/coredns:1.10.0 AS coredns
 
-RUN mkdir /proxy
+FROM alpine:3.17
 
-COPY requirements.txt /proxy/requirements.txt
+RUN apk add --update --no-cache yq ca-certificates curl
 
-RUN pip install -r /proxy/requirements.txt
+COPY --from=coredns /coredns /usr/local/bin/coredns
 
-COPY main.py /proxy/main.py
+ENTRYPOINT ["/entrypoint.sh"]
 
-ENTRYPOINT ["/proxy/main.py"]
+HEALTHCHECK CMD [ "curl" -sSf "http://127.0.0.1:8080/health" ]
 
+EXPOSE 53/UDP
+
+COPY entrypoint.sh /entrypoint.sh

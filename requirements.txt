@@ -1,2 +1,0 @@
-dnsrewriteproxy
-aiodnsresolver
