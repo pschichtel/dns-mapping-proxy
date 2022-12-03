@@ -4,7 +4,7 @@ FROM alpine:3.17
 
 RUN apk add --update --no-cache yq ca-certificates curl
 
-COPY --from=coredns /coredns /usr/local/bin/coredns
+COPY --from=coredns /coredns /coredns
 
 ENTRYPOINT ["/entrypoint.sh"]
 

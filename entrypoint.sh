@@ -50,4 +50,4 @@ $coredns_rules
 EOF
 
 cat "$corefile"
-exec coredns -conf "$corefile"
+exec /coredns -conf "$corefile"
