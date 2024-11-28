@@ -1,6 +1,6 @@
 FROM coredns/coredns:1.10.0 AS coredns
 
-FROM alpine:3.17
+FROM alpine:3.20
 
 RUN apk add --update --no-cache yq ca-certificates curl
 
