@@ -1,4 +1,4 @@
-FROM coredns/coredns:1.10.0 AS coredns
+FROM coredns/coredns:1.12.0 AS coredns
 
 FROM alpine:3.20
 
